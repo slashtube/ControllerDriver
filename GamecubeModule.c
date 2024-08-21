@@ -14,12 +14,29 @@ void usb_int_callback(struct urb* urb) {
     switch(urb->status) {
         case 0:
             break;
-        default:
+        case -ECONNRESET:
+        case -ESHUTDOWN:
+        case -ENOENT:
             return;
+        default:
+            goto poll;
     }
-    input_sync(dev->idev);
+poll:
+    if(usb_submit_urb(urb, GFP_ATOMIC)) {
+        return;
+    }
+    
+    int i;
+    for(i = 0; i < dev->buffer_size; i++) {
+        pr_alert("%d: %d", i, dev->buffer[i]);
+    }
+    input_report_abs(dev->idev, ABS_Z, dev->buffer[0]);
+    input_report_key(dev->idev, BTN_THUMB2, dev->buffer[5]);
+    input_report_key(dev->idev, BTN_TOP, dev->buffer[5]);
 
+    input_sync(dev->idev);
 }
+
 
 int input_open(struct input_dev* input) {
     struct NintendoDevice* dev = input_get_drvdata(input);
@@ -43,6 +60,7 @@ int usb_probe (struct usb_interface* interface, const struct usb_device_id* id) 
     struct NintendoDevice* dev;
     struct input_dev* input;
     struct usb_endpoint_descriptor* endpoint;
+    int pipe;
     struct urb* urb;
     int error;
     
@@ -61,7 +79,8 @@ int usb_probe (struct usb_interface* interface, const struct usb_device_id* id) 
 
     dev->in_endpoint = endpoint->bEndpointAddress;
     dev->interval = endpoint->bInterval;
-    dev->buffer_size = endpoint->wMaxPacketSize;
+    pipe = usb_rcvintpipe(dev->udev, dev->in_endpoint);
+    dev->buffer_size = usb_maxpacket(dev->udev,pipe, usb_pipeout(pipe)); 
     
     urb = usb_alloc_urb(0, GFP_KERNEL);
     if(!urb) {
@@ -69,29 +88,34 @@ int usb_probe (struct usb_interface* interface, const struct usb_device_id* id) 
         goto error;
     }
 
-    dev->buffer = kmalloc(sizeof(dev->buffer_size), GFP_KERNEL);
-    usb_fill_int_urb(urb, dev->udev, usb_rcvintpipe(dev->udev, dev->in_endpoint), dev->buffer, dev->buffer_size, usb_int_callback, dev, dev->interval);
+    dev->buffer = usb_alloc_coherent(dev->udev, dev->buffer_size, GFP_KERNEL, &dev->data_dma);
+    usb_fill_int_urb(urb, dev->udev, pipe, dev->buffer, dev->buffer_size > 8 ? 8 : dev->buffer_size, usb_int_callback, dev, dev->interval);
+    urb->transfer_dma = dev->data_dma;
+    urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
     dev->urb = urb;
 
     input->name = "GamecubeInput";
     input->open = input_open;
     input->close = input_close;
-    input_set_capability(input, EV_KEY, BTN_BASE);
-    input_set_capability(input, EV_KEY, BTN_BASE2);
+    input_set_capability(input, EV_ABS, ABS_Z);
+    input_set_capability(input, EV_MSC, MSC_SCAN);
+    input_set_capability(input, EV_KEY, BTN_THUMB2);
+    input_set_capability(input, EV_KEY, BTN_TOP);
+    input_set_abs_params(input, ABS_Z, 0, 255, 4, 8);
     usb_to_input_id(dev->udev, &input->id);
     dev->idev = input;
 
+    input_set_drvdata(dev->idev, dev);
     error = input_register_device(dev->idev);
     if(error) {
         goto error2;
     }
 
-    input_set_drvdata(dev->idev, dev);
-    usb_set_intfdata(interface, dev);
     pr_alert("Device allocated successfully");
+    usb_set_intfdata(interface, dev);
     return 0;
 error2:
-    kfree(dev->buffer);
+    usb_free_coherent(dev->udev, dev->buffer_size,dev->buffer, dev->data_dma);
 error:
     input_free_device(input);
     kfree(dev);
@@ -106,7 +130,7 @@ void usb_disconnect (struct usb_interface* interface) {
     usb_set_intfdata(interface, NULL);
     input_set_drvdata(dev->idev, NULL);
     input_unregister_device(dev->idev);
-    kfree(dev->buffer);
+    usb_free_coherent(dev->udev, dev->buffer_size,dev->buffer, dev->data_dma);
     usb_free_urb(dev->urb);
     input_free_device(dev->idev);
     kfree(dev);

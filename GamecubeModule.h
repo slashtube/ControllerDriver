@@ -13,10 +13,11 @@ struct NintendoDevice {
     struct usb_device* udev;
     struct input_dev* idev;
     struct urb* urb;
-    char* buffer;
+    signed char* buffer;
     ssize_t buffer_size;
     int interval;
     __u8 in_endpoint;
+    dma_addr_t data_dma;
 };
 
 void usb_int_callback(struct urb*);
