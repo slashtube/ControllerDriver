@@ -26,13 +26,28 @@ poll:
         return;
     }
     
-    int i;
-    for(i = 0; i < dev->buffer_size; i++) {
-        pr_alert("%d: %d", i, dev->buffer[i]);
-    }
-    input_report_abs(dev->idev, ABS_Z, dev->buffer[0]);
-    input_report_key(dev->idev, BTN_THUMB2, dev->buffer[5]);
-    input_report_key(dev->idev, BTN_TOP, dev->buffer[5]);
+    input_report_abs(dev->idev, ABS_X, dev->buffer[0]);
+    input_report_abs(dev->idev, ABS_Y, dev->buffer[1]);
+    input_report_abs(dev->idev, ABS_Z, dev->buffer[2]);
+    input_report_abs(dev->idev, ABS_RX, dev->buffer[3]);
+    input_report_abs(dev->idev, ABS_RY, dev->buffer[4]);
+
+    
+    //TODO: Fix DPAD_LEFT not being detected
+    input_report_key(dev->idev, BTN_BASE,  dev->buffer[5] ==  0x00); //DPAD_UP
+    input_report_key(dev->idev, BTN_BASE2, dev->buffer[5] == 0x02); //DPAD_RIGHT
+    input_report_key(dev->idev, BTN_BASE3, dev->buffer[5] == 0x04); //DPAD_DOWN
+    input_report_key(dev->idev, BTN_BASE4, dev->buffer[5] == 0x08); //DPAD_LEFT Currently not working
+                                                                   
+    input_report_key(dev->idev, BTN_X, dev->buffer[5] & 0x10);
+    input_report_key(dev->idev, BTN_Y, dev->buffer[5] & 0x20);
+    input_report_key(dev->idev, BTN_A, dev->buffer[5] & 0x40);
+    input_report_key(dev->idev, BTN_B, dev->buffer[5] & 0x80);
+
+    input_report_key(dev->idev, BTN_TL, dev->buffer[6] & 0x01);
+    input_report_key(dev->idev, BTN_TR, dev->buffer[6] & 0x02);
+    input_report_key(dev->idev, BTN_Z, dev->buffer[6] & 0x04);
+    input_report_key(dev->idev, BTN_START, dev->buffer[6] & 0x20);
 
     input_sync(dev->idev);
 }
@@ -97,11 +112,32 @@ int usb_probe (struct usb_interface* interface, const struct usb_device_id* id) 
     input->name = "GamecubeInput";
     input->open = input_open;
     input->close = input_close;
+
+    input_set_capability(input, EV_ABS, ABS_X);
+    input_set_capability(input, EV_ABS, ABS_Y);
     input_set_capability(input, EV_ABS, ABS_Z);
-    input_set_capability(input, EV_MSC, MSC_SCAN);
-    input_set_capability(input, EV_KEY, BTN_THUMB2);
-    input_set_capability(input, EV_KEY, BTN_TOP);
+    input_set_capability(input, EV_ABS, ABS_RX);
+    input_set_capability(input, EV_ABS, ABS_RY);
+    
+    input_set_abs_params(input, ABS_X, 0, 255, 4, 8);
+    input_set_abs_params(input, ABS_Y, 0, 255, 4, 8);
     input_set_abs_params(input, ABS_Z, 0, 255, 4, 8);
+    input_set_abs_params(input, ABS_RX, 0, 255, 4, 8);
+    input_set_abs_params(input, ABS_RY, 0, 255, 4, 8);
+
+    input_set_capability(input, EV_KEY, BTN_BASE);
+    input_set_capability(input, EV_KEY, BTN_BASE2);
+    input_set_capability(input, EV_KEY, BTN_BASE3);
+    input_set_capability(input, EV_KEY, BTN_BASE4);
+    input_set_capability(input, EV_KEY, BTN_A);
+    input_set_capability(input, EV_KEY, BTN_B);
+    input_set_capability(input, EV_KEY, BTN_X);
+    input_set_capability(input, EV_KEY, BTN_Y);
+    input_set_capability(input, EV_KEY, BTN_Z);
+    input_set_capability(input, EV_KEY, BTN_TL);
+    input_set_capability(input, EV_KEY, BTN_TR);
+    input_set_capability(input, EV_KEY, BTN_START);
+
     usb_to_input_id(dev->udev, &input->id);
     dev->idev = input;
 
