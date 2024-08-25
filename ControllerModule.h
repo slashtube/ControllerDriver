@@ -1,5 +1,5 @@
-#ifndef NINTENDOMODULE_H
-#define NINTENDO_MODULE_H
+#ifndef CONTROLLER_MODULE_H
+#define CONTROLLER_MODULE_H
 
 #define VENDOR_ID 0x0079 
 #define PRODUCT_ID 0x0006
@@ -9,7 +9,7 @@ struct usb_device_id dev_list[] = {
     {}
 };
 
-struct NintendoDevice {
+struct Device {
     struct usb_device* udev;
     struct input_dev* idev;
     struct urb* urb;

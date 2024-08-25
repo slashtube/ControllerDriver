@@ -5,12 +5,12 @@
 #include <linux/usb.h>
 #include <linux/input.h>
 #include <linux/usb/input.h>
-#include "GamecubeModule.h" 
+#include "ControllerModule.h" 
 
 MODULE_DEVICE_TABLE(usb, dev_list);
 
 void usb_int_callback(struct urb* urb) {
-    struct NintendoDevice* dev = urb->context;
+    struct Device* dev = urb->context;
     switch(urb->status) {
         case 0:
             break;
@@ -54,7 +54,7 @@ poll:
 
 
 int input_open(struct input_dev* input) {
-    struct NintendoDevice* dev = input_get_drvdata(input);
+    struct Device* dev = input_get_drvdata(input);
     int error;
     
     dev->urb->dev = dev->udev;
@@ -66,13 +66,13 @@ int input_open(struct input_dev* input) {
 }
 
 void input_close(struct input_dev* input) {
-    struct NintendoDevice* dev = input_get_drvdata(input);
+    struct Device* dev = input_get_drvdata(input);
 
     usb_kill_urb(dev->urb);
 }
 
 int usb_probe (struct usb_interface* interface, const struct usb_device_id* id) {
-    struct NintendoDevice* dev;
+    struct Device* dev;
     struct input_dev* input;
     struct usb_endpoint_descriptor* endpoint;
     int pipe;
@@ -109,7 +109,7 @@ int usb_probe (struct usb_interface* interface, const struct usb_device_id* id) 
     urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
     dev->urb = urb;
 
-    input->name = "GamecubeInput";
+    input->name = "ControllerInput";
     input->open = input_open;
     input->close = input_close;
 
@@ -160,7 +160,7 @@ exit:
 }
 
 void usb_disconnect (struct usb_interface* interface) {
-    struct NintendoDevice* dev;
+    struct Device* dev;
     dev = usb_get_intfdata(interface); 
 
     usb_set_intfdata(interface, NULL);
@@ -173,7 +173,7 @@ void usb_disconnect (struct usb_interface* interface) {
 }
 
 struct usb_driver Driver = {
-    .name = "GameCubeDriver",
+    .name = "ControllerDriver",
     .probe = usb_probe,
     .disconnect = usb_disconnect,
     .id_table = dev_list
@@ -183,4 +183,4 @@ module_usb_driver(Driver);
 
 MODULE_AUTHOR("slashtube");
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("A simple Gamecube controller USB driver");
+MODULE_DESCRIPTION("A simple controller USB driver");
