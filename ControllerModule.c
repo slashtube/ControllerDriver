@@ -164,11 +164,10 @@ void usb_disconnect (struct usb_interface* interface) {
     dev = usb_get_intfdata(interface); 
 
     usb_set_intfdata(interface, NULL);
-    input_set_drvdata(dev->idev, NULL);
     input_unregister_device(dev->idev);
+    input_set_drvdata(dev->idev, NULL);
     usb_free_coherent(dev->udev, dev->buffer_size,dev->buffer, dev->data_dma);
     usb_free_urb(dev->urb);
-    input_free_device(dev->idev);
     kfree(dev);
 }
 
