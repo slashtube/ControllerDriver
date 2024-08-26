@@ -32,12 +32,10 @@ poll:
     input_report_abs(dev->idev, ABS_RX, dev->buffer[3]);
     input_report_abs(dev->idev, ABS_RY, dev->buffer[4]);
 
-    
-    //TODO: Fix DPAD_LEFT not being detected
     input_report_key(dev->idev, BTN_BASE,  dev->buffer[5] ==  0x00); //DPAD_UP
     input_report_key(dev->idev, BTN_BASE2, dev->buffer[5] == 0x02); //DPAD_RIGHT
     input_report_key(dev->idev, BTN_BASE3, dev->buffer[5] == 0x04); //DPAD_DOWN
-    input_report_key(dev->idev, BTN_BASE4, dev->buffer[5] == 0x08); //DPAD_LEFT Currently not working
+    input_report_key(dev->idev, BTN_BASE4, dev->buffer[5] == 0x06); //DPAD_LEFT 
                                                                    
     input_report_key(dev->idev, BTN_X, dev->buffer[5] & 0x10);
     input_report_key(dev->idev, BTN_Y, dev->buffer[5] & 0x20);
